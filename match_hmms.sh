@@ -94,6 +94,15 @@ function match_hmms {
 		for hmm_seq in ${seq_list[@]};
 		do 
 			local PAT=$(echo $hmm_seq | sed s/--*/.*/g | sed s/[[:lower:]][[:lower:]]*/.*/g)
+
+   			while [[ $PAT =~ ^[^a-zA-Z].* ]]; do
+				PAT=${PAT#?}
+			done
+
+			while [[ $PAT =~ .*[^a-zA-Z]$ ]]; do
+				PAT=${PAT%?}
+			done
+   
 			local REV=$(echo $PAT | rev | sed s/\*\./.*/g)
 			local SEQ=$(get_seqs $seq_id)
 
