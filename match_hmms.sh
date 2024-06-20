@@ -40,9 +40,9 @@ function get_seqs {
 	local seq_id="$1"
 	
 	if echo "$seq_id" | grep -q ^tr; then
-		seq=$(grep -A 1 -m 1 -e "$seq_id" uniprot_trembl.fasta | grep -v "^>tr")
+		seq=$(grep -A 1 -m 1 -e "$seq_id" data/trembl.fasta | grep -v "^>tr")
 	else 
-		seq=$(grep -A 1 -m 1 -e "$seq_id" uniprot_sprot.fasta | grep -v "^>sp")
+		seq=$(grep -A 1 -m 1 -e "$seq_id" data/sprot.fasta | grep -v "^>sp")
 	fi
 	
 	echo "$seq"
@@ -78,12 +78,12 @@ function match_hmms {
 	echo "processing ""$seq_id"
 	
 	awk -v seq=$seq_id_cleaned -v lines="$lines" '
-			$0~seq {print NR > lines}' hmm_list.txt
+			$0~seq {print NR > lines}' data/hmm_list.txt
 
 	awk -v lines="$lines" -v seqs="$seqs" -v HMMs="$HMMs" '
 			BEGIN {getline L < lines}
 			$0~/HMM / {hmm=$0; sub(/^.*[[:space:]]/,"",hmm)}
-			NR == L {print $0 > seqs; print hmm > HMMs;getline L < lines}' hmm_seqlist.txt
+			NR == L {print $0 > seqs; print hmm > HMMs;getline L < lines}' data/hmm_seqlist.txt
 	echo "got HMM matching sequences for ""$seq_id_cleaned"
 	
 	if (($(grep -c . $HMMs) == $(grep -c . $seqs)));then
@@ -96,12 +96,11 @@ function match_hmms {
 			local PAT=$(echo $hmm_seq | sed s/--*/.*/g | sed s/[[:lower:]][[:lower:]]*/.*/g)
 			local REV=$(echo $PAT | rev | sed s/\*\./.*/g)
 			local SEQ=$(get_seqs $seq_id)
-			
-			echo $PAT
-			echo $REV
-			echo $SEQ
+
 			START=$( echo "$SEQ" | grep -ob -e "$PAT" | grep -oE [0-9]*)
 			END=$( echo "$SEQ" | rev | grep -ob -e "$REV" | grep -oE [0-9]*) 
+   			END=$((${#SEQ}-$END))
+
 			if [ ! "$START" ];then
 				START="1"
 				END=${#SEQ}
@@ -135,7 +134,7 @@ mkdir hmm_match_out
 export -f get_seqs
 export -f match_hmms
 
-mapfile -t seq_list < uniq_seqs.txt
+mapfile -t seq_list < data/uniq_seqs.txt
 
 printf '%s\n' "${seq_list[@]}"|xargs -I {} -n 1 -P 16 bash -c 'match_hmms "{}"'
 	
